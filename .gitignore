@@ -1,0 +1,72 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+
+# Environment and IDE
+.env
+.venv/
+*.env
+*.iml
+.idea/
+*.sublime-workspace
+.vscode/
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+
+# Data files
+*.csv
+*.tsv
+*.dat
+*.data
+*.db
+*.sqlite
+*.log
+*.gz
+*.zip
+*.tar
+*.hdf5
+*.parquet
+*.feather
+*.pickle
+*.pkl
+*.joblib
+
+# Images and videos
+*.png
+*.jpg
+*.jpeg
+*.bmp
+*.gif
+*.mp4
+*.mkv
+
+# Results and generated files
+*.out
+*.pdf
+*.svg
+*.tex
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Large files
+*.model
+*.ckpt
+*.h5
+*.weights
+*.onnx
+*.tflite
+*.pb
+
+# Miscellaneous
+*.bak
+*.old
+*.tmp
+
+# Ignore folders
+data/
+results/
+logs/
