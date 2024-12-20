@@ -30,7 +30,7 @@ class DarkTheme:
         style.configure("TRadiobutton", foreground=cls.FG_COLOR, background=cls.FRAME_BG)
         
 class PortfolioOptimizerGUI:
-    def __init__(self, root):
+    def __init__(self, root, data_file="data/prices.csv"):
         self.root = root
         self.root.title("Portfolio Optimizer")
         self.root.geometry("1200x800")
@@ -38,24 +38,89 @@ class PortfolioOptimizerGUI:
         
         DarkTheme.apply_theme()
         
+        # Initialize data
+        self.data_file = data_file
         self.data = None
         self.returns = None
         self.selected_tickers = []
+        self.all_tickers = []
+        
+        # Load initial data
+        self.initial_data_load()
         
         self.create_input_frame()
-        self.create_options_frame()  # New frame for additional options
+        self.create_options_frame()
         self.create_parameters_frame()
         self.create_visualization_frame()
         self.create_results_frame()
+
+    def initial_data_load(self):
+        """Load the initial dataset and get all available tickers."""
+        try:
+            initial_data = load_data(self.data_file)
+            self.all_tickers = list(initial_data.columns)
+            self.data = initial_data
+            self.returns = compute_returns(self.data)
+            self.selected_tickers = self.all_tickers
+        except Exception as e:
+            messagebox.showerror("Error", f"Error loading initial data: {str(e)}")
+            self.root.destroy()  # Exit if we can't load the data
         
     def create_input_frame(self):
-        input_frame = ttk.LabelFrame(self.root, text="Data Input", padding="5")
+        input_frame = ttk.LabelFrame(self.root, text="Data Selection", padding="5")
         input_frame.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
         
-        ttk.Button(input_frame, text="Load CSV Data", command=self.load_data).grid(row=0, column=0, padx=5, pady=5)
+        # Ticker entry
+        ttk.Label(input_frame, text="Filter Tickers:").grid(row=0, column=0, padx=5, pady=5)
         self.ticker_entry = ttk.Entry(input_frame)
         self.ticker_entry.grid(row=0, column=1, padx=5, pady=5)
-        ttk.Label(input_frame, text="Enter tickers (comma-separated)").grid(row=0, column=2, padx=5, pady=5)
+        
+        # Apply filter button
+        ttk.Button(input_frame, text="Apply Filter", command=self.filter_tickers).grid(row=0, column=2, padx=5, pady=5)
+        
+        # Show all button
+        ttk.Button(input_frame, text="Show All Tickers", command=self.show_all_tickers).grid(row=0, column=3, padx=5, pady=5)
+        
+        # Display current selection
+        self.ticker_count_label = ttk.Label(input_frame, text=f"Selected: {len(self.selected_tickers)} tickers")
+        self.ticker_count_label.grid(row=1, column=0, columnspan=4, padx=5, pady=5)
+
+    def filter_tickers(self):
+        """Filter the dataset based on user-entered tickers."""
+        tickers = [t.strip().upper() for t in self.ticker_entry.get().split(",") if t.strip()]
+        
+        if not tickers:
+            messagebox.showwarning("Warning", "Please enter at least one ticker")
+            return
+            
+        # Validate tickers
+        valid_tickers = [t for t in tickers if t in self.all_tickers]
+        invalid_tickers = set(tickers) - set(valid_tickers)
+        
+        if invalid_tickers:
+            messagebox.showwarning("Warning", f"Invalid tickers: {', '.join(invalid_tickers)}")
+        
+        if valid_tickers:
+            try:
+                self.data = load_data(self.data_file, valid_tickers)
+                self.returns = compute_returns(self.data)
+                self.selected_tickers = valid_tickers
+                self.ticker_count_label.config(text=f"Selected: {len(self.selected_tickers)} tickers")
+                messagebox.showinfo("Success", f"Filtered to {len(valid_tickers)} tickers")
+            except Exception as e:
+                messagebox.showerror("Error", f"Error filtering data: {str(e)}")
+                
+    def show_all_tickers(self):
+        """Reset to show all available tickers."""
+        try:
+            self.data = load_data(self.data_file)
+            self.returns = compute_returns(self.data)
+            self.selected_tickers = self.all_tickers
+            self.ticker_entry.delete(0, tk.END)
+            self.ticker_count_label.config(text=f"Selected: {len(self.selected_tickers)} tickers")
+            messagebox.showinfo("Success", "Showing all available tickers")
+        except Exception as e:
+            messagebox.showerror("Error", f"Error resetting data: {str(e)}")
 
     def create_options_frame(self):
         options_frame = ttk.LabelFrame(self.root, text="Analysis Options", padding="5")
@@ -155,10 +220,10 @@ class PortfolioOptimizerGUI:
             
             # Calculate expected returns based on selected method
             if self.forecast_method.get() == "arima":
-                expected_returns = forecast_returns_arima(processed_returns)
-            else:
                 expected_returns, _ = calculate_forecast(processed_returns)
                 expected_returns = expected_returns.values
+            else:
+                expected_returns = forecast_returns_arima(processed_returns)
             
             # Get parameters from GUI
             optimizer = GeneticOptimizer(
@@ -179,9 +244,6 @@ class PortfolioOptimizerGUI:
                 self.selected_tickers
             )
             
-            # Calculate expected portfolio return
-            portfolio_return = np.dot(best_portfolio, expected_returns)
-            
             # Update visualization
             self.ax.clear()
             self.ax.plot(fitness_history, color='#00ff00')
@@ -194,13 +256,12 @@ class PortfolioOptimizerGUI:
             # Update results
             self.results_text.delete(1.0, tk.END)
             self.results_text.insert(tk.END, f"Best Sharpe Ratio: {best_fitness:.4f}\n")
-            self.results_text.insert(tk.END, f"Expected Portfolio Return: {portfolio_return:.4%}\n")
             self.results_text.insert(tk.END, f"Forecast Method: {self.forecast_method.get().upper()}\n")
             self.results_text.insert(tk.END, f"Using Normalized Returns: {self.normalize_returns_var.get()}\n\n")
             self.results_text.insert(tk.END, "Optimal Portfolio Weights:\n")
             for ticker, weight in zip(self.selected_tickers, best_portfolio):
                 self.results_text.insert(tk.END, f"{ticker}: {weight:.4f}\n")
-                
+
         except Exception as e:
             messagebox.showerror("Error", f"Error during optimization: {str(e)}")
 
