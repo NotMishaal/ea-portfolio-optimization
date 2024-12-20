@@ -100,6 +100,7 @@ class PortfolioOptimizerGUI:
         self.viz_frame.grid(row=0, column=1, rowspan=2, padx=5, pady=5, sticky="nsew")
         
         # Create matplotlib figure
+        plt.style.use('dark_background')
         self.figure, self.ax = plt.subplots(figsize=(8, 6))
         self.figure.patch.set_facecolor(DarkTheme.BG_COLOR)
         self.ax.set_facecolor(DarkTheme.FRAME_BG)
@@ -156,10 +157,11 @@ class PortfolioOptimizerGUI:
             
             # Update visualization
             self.ax.clear()
-            self.ax.plot(fitness_history)
+            self.ax.plot(fitness_history, color='#00ff00')
             self.ax.set_xlabel("Generation")
             self.ax.set_ylabel("Best Sharpe Ratio")
             self.ax.set_title("Optimization Progress")
+            self.ax.grid(True, linestyle='--', alpha=0.3)
             self.canvas.draw()
             
             # Update results
