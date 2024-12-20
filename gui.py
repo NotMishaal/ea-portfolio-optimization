@@ -87,6 +87,11 @@ class PortfolioOptimizerGUI:
         self.results_text = tk.Text(self.results_frame, height=10, width=80)
         self.results_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
+    def load_data(self):
+        pass
+    
+    def run_optimization(self):
+        pass
 
 def main():
     root = tk.Tk()
