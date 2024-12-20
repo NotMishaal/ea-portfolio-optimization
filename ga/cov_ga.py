@@ -108,16 +108,16 @@ class GeneticOptimizer:
             
             population = new_population
             
-            fitnesses = [self.evaluate(ind, expected_returns, cov_matrix) for ind in population]
-            final_best_idx = np.argmax(fitnesses)
-            if fitnesses[final_best_idx] > best_fitness:
-                best_fitness = fitnesses[final_best_idx]
-                best_individual = population[final_best_idx][:]
+        fitnesses = [self.evaluate(ind, expected_returns, cov_matrix) for ind in population]
+        final_best_idx = np.argmax(fitnesses)
+        if fitnesses[final_best_idx] > best_fitness:
+            best_fitness = fitnesses[final_best_idx]
+            best_individual = population[final_best_idx][:]
 
-            # Print best portfolio with symbols
-            print("Best Fitness (Sharpe):", best_fitness)
-            print("Best Portfolio Allocation:")
-            for sym, w in zip(symbols, best_individual):
-                print(f"{sym}: {w:.4f}")
+        # Print best portfolio with symbols
+        print("Best Fitness (Sharpe):", best_fitness)
+        print("Best Portfolio Allocation:")
+        for sym, w in zip(symbols, best_individual):
+            print(f"{sym}: {w:.4f}")
             
         return best_individual, best_fitness, best_fits_over_time
