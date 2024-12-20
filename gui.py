@@ -38,13 +38,12 @@ class PortfolioOptimizerGUI:
         
         DarkTheme.apply_theme()
         
-        # Data storage
         self.data = None
         self.returns = None
         self.selected_tickers = []
         
-        # Create main containers
         self.create_input_frame()
+        self.create_options_frame()  # New frame for additional options
         self.create_parameters_frame()
         self.create_visualization_frame()
         self.create_results_frame()
@@ -57,10 +56,28 @@ class PortfolioOptimizerGUI:
         self.ticker_entry = ttk.Entry(input_frame)
         self.ticker_entry.grid(row=0, column=1, padx=5, pady=5)
         ttk.Label(input_frame, text="Enter tickers (comma-separated)").grid(row=0, column=2, padx=5, pady=5)
+
+    def create_options_frame(self):
+        options_frame = ttk.LabelFrame(self.root, text="Analysis Options", padding="5")
+        options_frame.grid(row=1, column=0, padx=5, pady=5, sticky="ew")
+        
+        # Forecast method selection
+        ttk.Label(options_frame, text="Forecast Method:").grid(row=0, column=0, padx=5, pady=5)
+        self.forecast_method = tk.StringVar(value="default")
+        ttk.Radiobutton(options_frame, text="Default", variable=self.forecast_method, 
+                       value="default").grid(row=0, column=1, padx=5, pady=5)
+        ttk.Radiobutton(options_frame, text="ARIMA", variable=self.forecast_method, 
+                       value="arima").grid(row=0, column=2, padx=5, pady=5)
+        
+        # Returns normalization toggle
+        ttk.Label(options_frame, text="Returns Processing:").grid(row=1, column=0, padx=5, pady=5)
+        self.normalize_returns_var = tk.BooleanVar(value=False)
+        ttk.Checkbutton(options_frame, text="Use Normalized Returns", 
+                       variable=self.normalize_returns_var).grid(row=1, column=1, columnspan=2, padx=5, pady=5)
         
     def create_parameters_frame(self):
         param_frame = ttk.LabelFrame(self.root, text="Algorithm Parameters", padding="5")
-        param_frame.grid(row=1, column=0, padx=5, pady=5, sticky="ew")
+        param_frame.grid(row=2, column=0, padx=5, pady=5, sticky="ew")
         
         # Population size
         ttk.Label(param_frame, text="Population Size:").grid(row=0, column=0, padx=5, pady=5)
@@ -97,9 +114,8 @@ class PortfolioOptimizerGUI:
         
     def create_visualization_frame(self):
         self.viz_frame = ttk.LabelFrame(self.root, text="Optimization Progress", padding="5")
-        self.viz_frame.grid(row=0, column=1, rowspan=2, padx=5, pady=5, sticky="nsew")
+        self.viz_frame.grid(row=0, column=1, rowspan=3, padx=5, pady=5, sticky="nsew")
         
-        # Create matplotlib figure
         plt.style.use('dark_background')
         self.figure, self.ax = plt.subplots(figsize=(8, 6))
         self.figure.patch.set_facecolor(DarkTheme.BG_COLOR)
@@ -109,7 +125,7 @@ class PortfolioOptimizerGUI:
         
     def create_results_frame(self):
         self.results_frame = ttk.LabelFrame(self.root, text="Optimization Results", padding="5")
-        self.results_frame.grid(row=2, column=0, columnspan=2, padx=5, pady=5, sticky="ew")
+        self.results_frame.grid(row=3, column=0, columnspan=2, padx=5, pady=5, sticky="ew")
         
         self.results_text = tk.Text(self.results_frame, height=10, width=80, 
                                   bg=DarkTheme.ENTRY_BG, fg=DarkTheme.FG_COLOR,
@@ -134,6 +150,16 @@ class PortfolioOptimizerGUI:
             return
             
         try:
+            # Process returns based on normalization option
+            processed_returns = normalize_returns(self.returns) if self.normalize_returns_var.get() else self.returns
+            
+            # Calculate expected returns based on selected method
+            if self.forecast_method.get() == "arima":
+                expected_returns = forecast_returns_arima(processed_returns)
+            else:
+                expected_returns, _ = calculate_forecast(processed_returns)
+                expected_returns = expected_returns.values
+            
             # Get parameters from GUI
             optimizer = GeneticOptimizer(
                 pop_size=int(self.pop_size_var.get()),
@@ -144,16 +170,17 @@ class PortfolioOptimizerGUI:
                 risk_free_rate=float(self.rf_rate_var.get())
             )
             
-            # Calculate expected returns and covariance
-            expected_returns, _ = calculate_forecast(self.returns)
-            cov_matrix = compute_covariance_matrix(self.returns)
+            cov_matrix = compute_covariance_matrix(processed_returns)
             
             # Run optimization
             best_portfolio, best_fitness, fitness_history = optimizer.run(
-                expected_returns.values,
+                expected_returns,
                 cov_matrix.values,
                 self.selected_tickers
             )
+            
+            # Calculate expected portfolio return
+            portfolio_return = np.dot(best_portfolio, expected_returns)
             
             # Update visualization
             self.ax.clear()
@@ -166,7 +193,10 @@ class PortfolioOptimizerGUI:
             
             # Update results
             self.results_text.delete(1.0, tk.END)
-            self.results_text.insert(tk.END, f"Best Sharpe Ratio: {best_fitness:.4f}\n\n")
+            self.results_text.insert(tk.END, f"Best Sharpe Ratio: {best_fitness:.4f}\n")
+            self.results_text.insert(tk.END, f"Expected Portfolio Return: {portfolio_return:.4%}\n")
+            self.results_text.insert(tk.END, f"Forecast Method: {self.forecast_method.get().upper()}\n")
+            self.results_text.insert(tk.END, f"Using Normalized Returns: {self.normalize_returns_var.get()}\n\n")
             self.results_text.insert(tk.END, "Optimal Portfolio Weights:\n")
             for ticker, weight in zip(self.selected_tickers, best_portfolio):
                 self.results_text.insert(tk.END, f"{ticker}: {weight:.4f}\n")
