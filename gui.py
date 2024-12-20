@@ -8,11 +8,35 @@ from ga.cov_ga import GeneticOptimizer
 from ml.forecasting import calculate_forecast, compute_covariance_matrix, forecast_returns_arima
 from ml.data_preprocessing import load_data, compute_returns, normalize_returns
 
+class DarkTheme:
+    BG_COLOR = "#2b2b2b"
+    FG_COLOR = "#ffffff"
+    FRAME_BG = "#363636"
+    ENTRY_BG = "#404040"
+    BUTTON_BG = "#4a4a4a"
+    BUTTON_FG = "#ffffff"
+    
+    @classmethod
+    def apply_theme(cls):
+        style = ttk.Style()
+        style.theme_use('alt')
+        
+        style.configure("TLabel", foreground=cls.FG_COLOR, background=cls.FRAME_BG)
+        style.configure("TButton", foreground=cls.BUTTON_FG, background=cls.BUTTON_BG)
+        style.configure("TEntry", fieldbackground=cls.ENTRY_BG, foreground=cls.FG_COLOR)
+        style.configure("TLabelframe", background=cls.FRAME_BG, foreground=cls.FG_COLOR)
+        style.configure("TLabelframe.Label", background=cls.FRAME_BG, foreground=cls.FG_COLOR)
+        style.configure("TCheckbutton", foreground=cls.FG_COLOR, background=cls.FRAME_BG)
+        style.configure("TRadiobutton", foreground=cls.FG_COLOR, background=cls.FRAME_BG)
+        
 class PortfolioOptimizerGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("Portfolio Optimizer")
         self.root.geometry("1200x800")
+        self.root.configure(bg=DarkTheme.BG_COLOR)
+        
+        DarkTheme.apply_theme()
         
         # Data storage
         self.data = None
@@ -77,6 +101,8 @@ class PortfolioOptimizerGUI:
         
         # Create matplotlib figure
         self.figure, self.ax = plt.subplots(figsize=(8, 6))
+        self.figure.patch.set_facecolor(DarkTheme.BG_COLOR)
+        self.ax.set_facecolor(DarkTheme.FRAME_BG)
         self.canvas = FigureCanvasTkAgg(self.figure, master=self.viz_frame)
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
         
@@ -84,7 +110,9 @@ class PortfolioOptimizerGUI:
         self.results_frame = ttk.LabelFrame(self.root, text="Optimization Results", padding="5")
         self.results_frame.grid(row=2, column=0, columnspan=2, padx=5, pady=5, sticky="ew")
         
-        self.results_text = tk.Text(self.results_frame, height=10, width=80)
+        self.results_text = tk.Text(self.results_frame, height=10, width=80, 
+                                  bg=DarkTheme.ENTRY_BG, fg=DarkTheme.FG_COLOR,
+                                  insertbackground=DarkTheme.FG_COLOR)
         self.results_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
     def load_data(self):
