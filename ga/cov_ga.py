@@ -120,4 +120,4 @@ class GeneticOptimizer:
             for sym, w in zip(symbols, best_individual):
                 print(f"{sym}: {w:.4f}")
             
-            return best_individual, best_fitness, best_fits_over_time
+        return best_individual, best_fitness, best_fits_over_time
