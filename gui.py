@@ -88,10 +88,61 @@ class PortfolioOptimizerGUI:
         self.results_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
     def load_data(self):
-        pass
+        file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])
+        if file_path:
+            try:
+                tickers = [t.strip() for t in self.ticker_entry.get().split(",") if t.strip()]
+                self.data = load_data(file_path, tickers if tickers else None)
+                self.returns = compute_returns(self.data)
+                self.selected_tickers = list(self.data.columns)
+                messagebox.showinfo("Success", f"Loaded data for {len(self.selected_tickers)} stocks")
+            except Exception as e:
+                messagebox.showerror("Error", f"Error loading data: {str(e)}")
     
     def run_optimization(self):
-        pass
+        if self.data is None:
+            messagebox.showerror("Error", "Please load data first")
+            return
+            
+        try:
+            # Get parameters from GUI
+            optimizer = GeneticOptimizer(
+                pop_size=int(self.pop_size_var.get()),
+                ngen=int(self.ngen_var.get()),
+                tourn_size=int(self.tourn_size_var.get()),
+                cxpb=float(self.cxpb_var.get()),
+                mutpb=float(self.mutpb_var.get()),
+                risk_free_rate=float(self.rf_rate_var.get())
+            )
+            
+            # Calculate expected returns and covariance
+            expected_returns, _ = calculate_forecast(self.returns)
+            cov_matrix = compute_covariance_matrix(self.returns)
+            
+            # Run optimization
+            best_portfolio, best_fitness, fitness_history = optimizer.run(
+                expected_returns.values,
+                cov_matrix.values,
+                self.selected_tickers
+            )
+            
+            # Update visualization
+            self.ax.clear()
+            self.ax.plot(fitness_history)
+            self.ax.set_xlabel("Generation")
+            self.ax.set_ylabel("Best Sharpe Ratio")
+            self.ax.set_title("Optimization Progress")
+            self.canvas.draw()
+            
+            # Update results
+            self.results_text.delete(1.0, tk.END)
+            self.results_text.insert(tk.END, f"Best Sharpe Ratio: {best_fitness:.4f}\n\n")
+            self.results_text.insert(tk.END, "Optimal Portfolio Weights:\n")
+            for ticker, weight in zip(self.selected_tickers, best_portfolio):
+                self.results_text.insert(tk.END, f"{ticker}: {weight:.4f}\n")
+                
+        except Exception as e:
+            messagebox.showerror("Error", f"Error during optimization: {str(e)}")
 
 def main():
     root = tk.Tk()
