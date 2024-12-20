@@ -25,7 +25,7 @@ def forecast_returns_arima(returns, forecast_horizon=1):
     
     for stock in returns.columns:
         series = returns[stock].dropna()
-        model = ARIMA(series, order=(1,0,0))
+        model = ARIMA(series, order=(1,1,0))
         model_fit = model.fit()
         # Forecast the next step
         forecast = model_fit.forecast(steps=forecast_horizon)
